@@ -10,14 +10,25 @@ Em outros sistemas, use `python -m pip install Pillow` e `python index.py`.
 """
 
 import queue
+import re
 import threading
 import tkinter as tk
+import unicodedata
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps
 
 EXTENSOES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+
+
+def sanitizar_nome(nome: str) -> str:
+    nome = unicodedata.normalize("NFKD", nome)
+    nome = "".join(caractere for caractere in nome if not unicodedata.combining(caractere))
+    nome = re.sub(r"\s+", "-", nome)
+    nome = re.sub(r"[^A-Za-z0-9-]", "", nome)
+    nome = re.sub(r"-+", "-", nome).strip("-")
+    return nome or "imagem"
 
 
 def converter(origem: Path, destino: Path, max_w: int, max_h: int, qualidade: int):
@@ -165,7 +176,8 @@ class App(tk.Tk):
 
         antes_total = depois_total = 0
         for i, arq in enumerate(arquivos, 1):
-            rel = arq.relative_to(entrada).with_suffix(".webp")
+            rel = arq.relative_to(entrada)
+            rel = rel.with_name(f"{sanitizar_nome(rel.stem)}.webp")
             try:
                 antes, depois = converter(arq, saida / rel, max_w, max_h, qualidade)
                 antes_total += antes
